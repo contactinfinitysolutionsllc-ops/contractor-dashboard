@@ -388,11 +388,20 @@ function doSignout() {
 async function initApp() {
   showScreen('app');
 
-  // Get contractor profile linked to this user
-  const res = await fetch(SB_URL + '/rest/v1/contractors?user_id=eq.' + currentUser.id, {
-    headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentToken }
-  });
-  const contractors = await res.json();
+  // Look up contractor profile — by user_id first, fall back to email
+  let contractors = [];
+  try {
+    const r1 = await fetch(SB_URL + '/rest/v1/contractors?user_id=eq.' + currentUser.id, {
+      headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentToken }
+    });
+    contractors = await r1.json();
+    if (!contractors?.length && currentUser.email) {
+      const r2 = await fetch(SB_URL + '/rest/v1/contractors?email=eq.' + encodeURIComponent(currentUser.email), {
+        headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + currentToken }
+      });
+      contractors = await r2.json();
+    }
+  } catch(e) {}
   contractorProfile = contractors?.[0] || null;
 
   // Update header
